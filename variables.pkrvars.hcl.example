@@ -1,0 +1,15 @@
+# Packer Variables Configuration
+# Copy this file to variables.auto.pkrvars.hcl and customize the values
+
+# Base image name (timestamp will be appended automatically)
+image_name = "poc-nginx-image"
+
+# GCP Configuration
+gcp_project_id = "your-gcp-project-id"
+
+# Azure Configuration
+azure_client_id       = "your-client-id"
+azure_client_secret   = "your-client-secret"
+azure_tenant_id       = "your-tenant-id"
+azure_subscription_id = "your-subscription-id"
+azure_resource_group  = "your-resource-group"
