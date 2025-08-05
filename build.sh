@@ -112,12 +112,16 @@ if [[ ! -f "$VARS_FILE" ]]; then
     fi
 fi
 
-# Initialize Packer
-echo -e "${BLUE}🔧 Initializing Packer...${NC}"
+# Initialize Packer and install plugins
+echo -e "${BLUE}🔧 Initializing Packer and installing plugins...${NC}"
 if packer init main.pkr.hcl; then
-    echo -e "${GREEN}✅ Packer initialized successfully${NC}"
+    echo -e "${GREEN}✅ Packer initialized and plugins installed successfully${NC}"
+    echo -e "${GREEN}   - AWS plugin installed${NC}"
+    echo -e "${GREEN}   - Google Cloud plugin installed${NC}"
+    echo -e "${GREEN}   - Azure plugin installed${NC}"
 else
-    echo -e "${RED}❌ Failed to initialize Packer${NC}"
+    echo -e "${RED}❌ Failed to initialize Packer or install plugins${NC}"
+    echo "Make sure you have internet connectivity for plugin downloads"
     exit 1
 fi
 
