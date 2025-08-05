@@ -1,6 +1,6 @@
-# Multi-Cloud NGINX Image with Packer and Chef
+# Multi-Cloud NGINX Image with Packer
 
-This repository contains a Packer template that builds a standardized Ubuntu 22.04 LTS image with NGINX installed across multiple cloud platforms using Chef as the provisioner.
+This repository contains a Packer template that builds a standardized Ubuntu 22.04 LTS image with NGINX installed across multiple cloud platforms using shell script provisioning.
 
 ## 🎯 Supported Platforms
 
@@ -59,10 +59,15 @@ azure_subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 azure_resource_group  = "my-images-rg"
 ```
 
-### 3. Initialize Packer
+### 3. Initialize Packer and Install Plugins
 ```bash
 packer init main.pkr.hcl
 ```
+
+This will automatically install the required plugins:
+- Amazon plugin for AWS AMI building
+- Google Cloud plugin for GCE image building  
+- Azure plugin for managed image building
 
 ### 4. Validate Template
 ```bash
@@ -94,20 +99,28 @@ packer build -only="azure-arm.azure" main.pkr.hcl
 packer/
 ├── main.pkr.hcl                     # Main Packer template
 ├── variables.pkrvars.hcl.example    # Example variables file
-├── cookbooks/
-│   └── nginx/
-│       ├── metadata.rb              # Cookbook metadata
-│       ├── recipes/
-│       │   └── default.rb           # Main recipe
-│       └── templates/
-│           ├── index.html.erb       # Custom welcome page
-│           └── default.erb          # NGINX configuration
+├── build.sh                         # Build automation script for AlmaLinux/RHEL
+├── scripts/
+│   └── install_nginx.sh             # NGINX installation and configuration script
 └── README.md                        # This file
 ```
 
-## 🔧 Chef Cookbook Details
+## 🔧 Provisioning Details
 
-The included Chef cookbook (`cookbooks/nginx`) performs the following:
+The template uses **shell script provisioning** which:
+
+1. **Updates package cache** and installs dependencies
+2. **Copies the installation script** to the target instance
+3. **Executes the NGINX installation script** which:
+   - Installs NGINX package
+   - Creates a custom welcome page
+   - Configures optimized NGINX settings
+   - Sets up security headers and compression
+   - Creates health check endpoint
+   - Enables and starts the service
+4. **Cleans up** temporary files after provisioning
+
+The included installation script (`scripts/install_nginx.sh`) performs the following:
 
 1. **Updates package cache**
 2. **Installs NGINX** package
@@ -130,14 +143,14 @@ The included Chef cookbook (`cookbooks/nginx`) performs the following:
 
 ## 🎛️ Customization
 
-### Modifying the Chef Recipe
-Edit `cookbooks/nginx/recipes/default.rb` to customize the NGINX installation and configuration.
+### Modifying the Installation Script
+Edit `scripts/install_nginx.sh` to customize the NGINX installation and configuration.
 
 ### Changing the Welcome Page
-Modify `cookbooks/nginx/templates/index.html.erb` to customize the default webpage.
+Modify the HTML content in `scripts/install_nginx.sh` to customize the default webpage.
 
 ### NGINX Configuration
-Update `cookbooks/nginx/templates/default.erb` to modify NGINX server configuration.
+Update the server configuration block in `scripts/install_nginx.sh` to modify NGINX server settings.
 
 ## 🔍 Troubleshooting
 
@@ -151,9 +164,15 @@ Update `cookbooks/nginx/templates/default.erb` to modify NGINX server configurat
    - Run `packer validate main.pkr.hcl` to check template syntax
    - Verify all required variables are set in your variables file
 
-3. **Chef Provisioning Issues**
-   - Check that cookbook paths are correct
-   - Verify Chef client installation succeeds
+3. **Script Provisioning Issues**
+   - Check that the installation script exists at `scripts/install_nginx.sh`
+   - Verify script has proper permissions and is executable
+   - Check script syntax if provisioning fails
+
+4. **Plugin Installation Issues**
+   - Run `packer init main.pkr.hcl` to install all required plugins
+   - Check internet connectivity for plugin downloads
+   - Verify Packer version supports the plugin system (>= 1.7.0)
 
 ### Debug Mode
 Run Packer with debug flags for detailed output:
