@@ -142,42 +142,26 @@ build {
     ]
   }
 
-  # Install Chef Infra Client
-  provisioner "shell" {
-    inline = [
-      "curl -L https://omnitruck.chef.io/install.sh | sudo bash -s -- -v 18"
-    ]
-  }
-
-  # Copy cookbook to the instance
+  # Copy NGINX installation script
   provisioner "file" {
-    source      = "cookbooks/"
-    destination = "/tmp/cookbooks"
+    source      = "scripts/install_nginx.sh"
+    destination = "/tmp/install_nginx.sh"
   }
 
-  # Run Chef client in local mode
-  provisioner "chef" {
-    cookbook_paths = ["/tmp/cookbooks"]
-    run_list       = ["nginx::default"]
-    prevent_sudo   = false
-  }
-
-  # Cleanup Chef installation and temporary files
+  # Run NGINX installation and configuration script
   provisioner "shell" {
     inline = [
-      "sudo rm -rf /tmp/cookbooks",
-      "sudo rm -rf /opt/chef",
-      "sudo rm -rf /var/chef",
-      "sudo apt-get autoremove -y",
-      "sudo apt-get clean"
+      "chmod +x /tmp/install_nginx.sh",
+      "/tmp/install_nginx.sh"
     ]
   }
 
-  # Final system preparation
+  # Cleanup and final system preparation
   provisioner "shell" {
     inline = [
-      "sudo systemctl enable nginx",
-      "sudo systemctl start nginx",
+      "sudo rm -f /tmp/install_nginx.sh",
+      "sudo apt-get autoremove -y",
+      "sudo apt-get clean",
       "echo 'Image provisioning completed successfully!' | sudo tee /var/log/packer-build.log"
     ]
   }
