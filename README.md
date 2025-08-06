@@ -12,23 +12,48 @@ This repository contains a Packer template that builds a standardized Ubuntu 22.
 
 ### Required Tools
 - [Packer](https://www.packer.io/downloads) (>= 1.8.0)
-- Valid cloud provider credentials
+- Valid cloud provider credentials (see [Cloud Setup Guide](CLOUD_SETUP.md) for detailed instructions)
 
 ### Cloud Provider Requirements
 
+> 📖 **For detailed setup instructions, see [CLOUD_SETUP.md](CLOUD_SETUP.md)**
+
 #### AWS
-- AWS CLI configured or environment variables set:
-  - `AWS_ACCESS_KEY_ID`
-  - `AWS_SECRET_ACCESS_KEY`
-  - `AWS_DEFAULT_REGION`
+- AWS account with IAM user that has EC2 permissions
+- Access Key ID and Secret Access Key
+- Configure via environment variables, AWS CLI, or credentials file
 
 #### Google Cloud Platform
-- Service account key or gcloud CLI authenticated
+- GCP account with billing enabled
 - Project with Compute Engine API enabled
+- Service account with Compute permissions and JSON key file
 
 #### Azure
-- Service principal with contributor permissions
-- Resource group created for storing images
+- Azure account with active subscription
+- Service principal with Contributor role
+- Resource group for storing images
+
+### Quick Credential Setup
+
+**AWS:**
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_DEFAULT_REGION="us-east-1"
+```
+
+**GCP:**
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+```
+
+**Azure:**
+```bash
+export ARM_CLIENT_ID="your-client-id"
+export ARM_CLIENT_SECRET="your-client-secret"
+export ARM_TENANT_ID="your-tenant-id"
+export ARM_SUBSCRIPTION_ID="your-subscription-id"
+```
 
 ## 🚀 Quick Start
 
@@ -76,21 +101,57 @@ packer validate main.pkr.hcl
 
 ### 5. Build Images
 
+#### Pre-build Validation (Recommended)
+Check for existing images to prevent duplicates:
+```bash
+# Check if images already exist
+chmod +x validate-build.sh
+./validate-build.sh
+
+# Check with specific version
+./validate-build.sh --name my-image --version 2.1.0
+
+# Auto-increment version if conflicts found
+./validate-build.sh --auto-increment
+```
+
 #### Build for all platforms:
 ```bash
+# With validation (recommended)
+./build.sh
+
+# Skip validation (if you want to force rebuild)
+./build.sh --skip-validation
+
+# Traditional packer command
 packer build main.pkr.hcl
 ```
 
 #### Build for specific platform:
 ```bash
 # AWS only
+./build.sh --platform aws
 packer build -only="amazon-ebs.aws" main.pkr.hcl
 
-# GCP only
+# GCP only  
+./build.sh --platform gcp
 packer build -only="googlecompute.gcp" main.pkr.hcl
 
 # Azure only
+./build.sh --platform azure
 packer build -only="azure-arm.azure" main.pkr.hcl
+```
+
+#### Version Management:
+```bash
+# Build with specific version
+packer build -var="image_version=2.1.0" main.pkr.hcl
+
+# Force rebuild (replace existing images)
+packer build -var="force_rebuild=true" main.pkr.hcl
+
+# Skip AMI creation if exists (AWS only)
+packer build -var="skip_create_ami=true" main.pkr.hcl
 ```
 
 ## 📁 Project Structure
@@ -100,25 +161,40 @@ packer/
 ├── main.pkr.hcl                     # Main Packer template
 ├── variables.pkrvars.hcl.example    # Example variables file
 ├── build.sh                         # Build automation script for AlmaLinux/RHEL
+├── validate-build.sh                # Pre-build validation script (prevents duplicates)
+├── cleanup.sh                       # Complete resource cleanup script
+├── emergency-cleanup.sh             # Emergency instance termination script
+├── check-credentials.sh              # Credential validation script
 ├── scripts/
 │   └── install_nginx.sh             # NGINX installation and configuration script
+├── CLOUD_SETUP.md                   # Detailed cloud provider setup guide
 └── README.md                        # This file
 ```
 
 ## 🔧 Provisioning Details
 
-The template uses **shell script provisioning** which:
+The template uses **shell script provisioning** with **version-based naming** which:
 
-1. **Updates package cache** and installs dependencies
-2. **Copies the installation script** to the target instance
-3. **Executes the NGINX installation script** which:
+1. **Prevents duplicate resources** by using versioned image names
+2. **Pre-build validation** checks for existing images before building
+3. **Updates package cache** and installs dependencies
+4. **Copies the installation script** to the target instance
+5. **Executes the NGINX installation script** which:
    - Installs NGINX package
    - Creates a custom welcome page
    - Configures optimized NGINX settings
    - Sets up security headers and compression
    - Creates health check endpoint
    - Enables and starts the service
-4. **Cleans up** temporary files after provisioning
+6. **Cleans up** temporary files after provisioning
+
+### Deduplication Features
+
+- **Version-based naming**: Images use `image-name-v1.0.0` format instead of timestamps
+- **Pre-build validation**: Checks if images already exist before starting build
+- **Force rebuild option**: Can override existing images when needed
+- **Auto-increment**: Automatically bump version numbers when conflicts found
+- **Skip AMI creation**: Option to skip AWS AMI creation if one already exists
 
 The included installation script (`scripts/install_nginx.sh`) performs the following:
 
@@ -193,6 +269,88 @@ Each image will be tagged with:
 - OS: ubuntu
 - Service: nginx
 - Timestamp in the name for uniqueness
+
+## 🧹 Cleanup Resources
+
+To remove all resources created by Packer builds:
+
+### Emergency Instance Cleanup (for running instances)
+If Packer builds fail or get interrupted, instances might be left running:
+
+```bash
+# See what instances are running
+chmod +x emergency-cleanup.sh
+./emergency-cleanup.sh --dry-run
+
+# Terminate all running Packer instances immediately
+./emergency-cleanup.sh
+
+# Force cleanup without prompts
+./emergency-cleanup.sh --force
+```
+
+### Complete Resource Cleanup (images + instances + other resources)
+```bash
+# See what would be deleted (dry run)
+chmod +x cleanup.sh
+./cleanup.sh --dry-run
+
+# Delete all images and resources with default prefix (poc-nginx-image)
+./cleanup.sh
+
+# Delete images with custom prefix
+./cleanup.sh --prefix my-custom-image
+
+# Force cleanup without prompts
+./cleanup.sh --force
+```
+
+### What Gets Cleaned Up
+
+**AWS:**
+- ✅ Running/stopped EC2 instances created by Packer
+- ✅ AMIs (Amazon Machine Images)
+- ✅ Associated EBS snapshots
+- ✅ Packer-created security groups
+- ✅ Packer-created key pairs
+
+**GCP:**
+- ✅ Running Packer compute instances
+- ✅ Custom compute images
+
+**Azure:**
+- ✅ Running Packer VMs
+- ✅ Managed images
+
+### Manual Cleanup
+
+**AWS AMIs:**
+```bash
+# List your AMIs
+aws ec2 describe-images --owners self --query "Images[?starts_with(Name, 'poc-nginx-image')].{ImageId:ImageId,Name:Name}"
+
+# Delete specific AMI and its snapshots
+aws ec2 deregister-image --image-id ami-12345678
+aws ec2 delete-snapshot --snapshot-id snap-12345678
+```
+
+**GCP Images:**
+```bash
+# List your images
+gcloud compute images list --filter="name~^poc-nginx-image.*"
+
+# Delete specific image
+gcloud compute images delete poc-nginx-image-gcp-1234567890
+```
+
+**Azure Managed Images:**
+```bash
+# List your images
+az image list --query "[?starts_with(name, 'poc-nginx-image')]"
+
+# Delete specific image
+az image delete --name poc-nginx-image-azure-1234567890 --resource-group your-rg
+```
 
 ## 🔒 Security Considerations
 
