@@ -21,9 +21,27 @@ variable "image_name" {
   description = "Base name for the generated images"
 }
 
+variable "image_version" {
+  type        = string
+  default     = "1.0.0"
+  description = "Version of the image (used for deduplication)"
+}
+
+variable "force_rebuild" {
+  type        = bool
+  default     = false
+  description = "Force rebuild even if image already exists"
+}
+
+variable "skip_create_ami" {
+  type        = bool
+  default     = false
+  description = "Skip AMI creation if one with the same name already exists"
+}
+
 variable "gcp_project_id" {
   type        = string
-  default     = "your-gcp-project-id"
+  default     = "packer-images-468118"
   description = "GCP Project ID"
 }
 
@@ -62,7 +80,8 @@ variable "azure_resource_group" {
 source "amazon-ebs" "aws" {
   region        = "us-east-1"
   instance_type = "t2.micro"
-  ami_name      = "${var.image_name}-aws-{{timestamp}}"
+  ami_name      = "${var.image_name}-aws-v${var.image_version}"
+  skip_create_ami = var.skip_create_ami
   
   source_ami_filter {
     filters = {
@@ -77,10 +96,12 @@ source "amazon-ebs" "aws" {
   ssh_username = "ubuntu"
   
   tags = {
-    Name        = "${var.image_name}-aws"
+    Name        = "${var.image_name}-aws-v${var.image_version}"
     Environment = "poc"
     OS          = "Ubuntu"
     Service     = "nginx"
+    Version     = var.image_version
+    BuildDate   = "{{timestamp}}"
   }
 }
 
@@ -89,7 +110,7 @@ source "googlecompute" "gcp" {
   project_id          = var.gcp_project_id
   zone                = "us-central1-a"
   source_image_family = "ubuntu-2204-lts"
-  image_name          = "${var.image_name}-gcp-{{timestamp}}"
+  image_name          = "${var.image_name}-gcp-v${replace(var.image_version, ".", "-")}"
   machine_type        = "e2-micro"
   ssh_username        = "ubuntu"
   
@@ -97,6 +118,8 @@ source "googlecompute" "gcp" {
     environment = "poc"
     os          = "ubuntu"
     service     = "nginx"
+    version     = replace(var.image_version, ".", "-")
+    build_date  = "{{timestamp}}"
   }
 }
 
@@ -107,7 +130,7 @@ source "azure-arm" "azure" {
   tenant_id                         = var.azure_tenant_id
   subscription_id                   = var.azure_subscription_id
   
-  managed_image_name                = "${var.image_name}-azure-{{timestamp}}"
+  managed_image_name                = "${var.image_name}-azure-v${var.image_version}"
   managed_image_resource_group_name = var.azure_resource_group
   location                          = "East US"
   vm_size                          = "Standard_DS1_v2"
@@ -121,6 +144,8 @@ source "azure-arm" "azure" {
     Environment = "poc"
     OS          = "Ubuntu"
     Service     = "nginx"
+    Version     = var.image_version
+    BuildDate   = "{{timestamp}}"
   }
 }
 
