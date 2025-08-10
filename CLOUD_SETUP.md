@@ -1,6 +1,6 @@
 # Cloud Provider Setup Guide
 
-This guide provides step-by-step instructions for setting up accounts and credentials for AWS, Google Cloud Platform, and Azure to use with Packer.
+This guide provides step-by-step instructions for setting up accounts and credentials for AWS and Google Cloud Platform to use with Packer.
 
 ## 🔧 AWS Setup
 
@@ -178,69 +178,7 @@ gcloud config set project YOUR_PROJECT_ID
 
 ---
 
-## 🔷 Azure Setup
-
-### 1. Create Azure Account
-1. Go to [https://azure.microsoft.com](https://azure.microsoft.com)
-2. Click "Start free" or "Pay as you go"
-3. Sign in with Microsoft account or create one
-4. Complete verification (requires credit card, but you get $200 free credit)
-
-### 2. Create Resource Group
-```bash
-# Using Azure CLI (install first)
-az group create --name packer-images-rg --location "East US"
-
-# Or via Portal: Resource groups → Create → Name: packer-images-rg → Region: East US
-```
-
-### 3. Create Service Principal
-```bash
-# Create service principal
-az ad sp create-for-rbac --name "packer-sp" --role Contributor --scopes /subscriptions/YOUR_SUBSCRIPTION_ID
-
-# This will output:
-# {
-#   "appId": "your-client-id",
-#   "displayName": "packer-sp",
-#   "password": "your-client-secret",
-#   "tenant": "your-tenant-id"
-# }
-```
-
-### 4. Get Subscription ID
-```bash
-# Get subscription ID
-az account show --query id --output tsv
-
-# Or via Portal: Subscriptions → Copy the Subscription ID
-```
-
-### 5. Configure Azure Credentials
-
-**Option A: Environment Variables**
-```bash
-export ARM_CLIENT_ID="your-client-id"
-export ARM_CLIENT_SECRET="your-client-secret"
-export ARM_TENANT_ID="your-tenant-id"
-export ARM_SUBSCRIPTION_ID="your-subscription-id"
-```
-
-**Option B: Azure CLI Login**
-```bash
-# Install Azure CLI
-curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-# Login
-az login
-
-# Set subscription (if you have multiple)
-az account set --subscription "your-subscription-id"
-```
-
----
-
-## 🔧 Update Packer Variables
+##  Update Packer Variables
 
 Create your `variables.auto.pkrvars.hcl` file:
 
@@ -250,13 +188,6 @@ image_name = "my-nginx-image"
 
 # GCP Configuration
 gcp_project_id = "your-actual-project-id"
-
-# Azure Configuration
-azure_client_id       = "your-actual-client-id"
-azure_client_secret   = "your-actual-client-secret"
-azure_tenant_id       = "your-actual-tenant-id"
-azure_subscription_id = "your-actual-subscription-id"
-azure_resource_group  = "packer-images-rg"
 ```
 
 ## 🚀 Test Your Setup
@@ -272,11 +203,6 @@ gcloud auth list
 gcloud projects list
 ```
 
-### Test Azure
-```bash
-az account show
-```
-
 ## 🔍 Troubleshooting
 
 ### AWS Issues
@@ -288,11 +214,6 @@ az account show
 - **Default credentials not found**: Set `GOOGLE_APPLICATION_CREDENTIALS`
 - **API not enabled**: Enable Compute Engine API
 - **Project not found**: Check project ID spelling
-
-### Azure Issues
-- **Invalid tenant**: Check tenant ID format and validity
-- **Authentication failed**: Verify client ID and secret
-- **Subscription not found**: Confirm subscription ID
 
 ## 💡 Cost Optimization Tips
 
@@ -351,24 +272,13 @@ gcloud compute images list --no-standard-images
 gcloud compute images delete IMAGE_NAME
 ```
 
-**Azure - Remove Managed Images:**
-```bash
-# List managed images
-az image list
-
-# Delete image
-az image delete --name IMAGE_NAME --resource-group RESOURCE_GROUP
-```
-
 ### Cost Monitoring
 
 - **AWS**: Check EC2 console for AMI storage costs
 - **GCP**: Monitor Compute Engine storage in billing
-- **Azure**: Check storage costs in cost management
 
 ### Automated Cleanup
 
 Consider setting up automated cleanup policies:
 - **AWS**: Use lifecycle policies for AMIs
 - **GCP**: Set up Cloud Scheduler for image cleanup
-- **Azure**: Use Azure Automation for managed image cleanup
