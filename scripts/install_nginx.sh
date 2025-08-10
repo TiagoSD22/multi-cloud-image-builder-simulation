@@ -61,7 +61,7 @@ sudo tee /var/www/html/index.html > /dev/null <<'EOF'
     <div class="container">
         <div class="header">
             <h1>🚀 Multi-Cloud NGINX Server</h1>
-            <p>Successfully deployed across AWS, GCP, and Azure</p>
+            <p>Successfully deployed across AWS and GCP</p>
         </div>
         
         <div class="info">
@@ -77,7 +77,7 @@ sudo tee /var/www/html/index.html > /dev/null <<'EOF'
             <ul>
                 <li>☁️ AWS EC2 AMI</li>
                 <li>☁️ Google Cloud GCE Image</li>
-                <li>☁️ Azure Managed Image</li>
+                <li>☁️ GCP Image</li>
             </ul>
         </div>
         
