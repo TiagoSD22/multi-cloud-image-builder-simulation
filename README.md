@@ -1,12 +1,11 @@
 # Multi-Cloud NGINX Image with Packer
 
-This repository contains a Packer template that builds a standardized Ubuntu 22.04 LTS image with NGINX installed across multiple cloud platforms using shell script provisioning.
+This repository contains a Packer template that builds a standardized Ubuntu 22.04 LTS image with NGINX installed across AWS and Google Cloud Platform using shell script provisioning.
 
 ## 🎯 Supported Platforms
 
 - **AWS EC2 AMI**
 - **Google Cloud GCE Image**
-- **Azure Managed Image**
 
 ## 📋 Prerequisites
 
@@ -28,11 +27,6 @@ This repository contains a Packer template that builds a standardized Ubuntu 22.
 - Project with Compute Engine API enabled
 - Service account with Compute permissions and JSON key file
 
-#### Azure
-- Azure account with active subscription
-- Service principal with Contributor role
-- Resource group for storing images
-
 ### Quick Credential Setup
 
 **AWS:**
@@ -45,14 +39,6 @@ export AWS_DEFAULT_REGION="us-east-1"
 **GCP:**
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-```
-
-**Azure:**
-```bash
-export ARM_CLIENT_ID="your-client-id"
-export ARM_CLIENT_SECRET="your-client-secret"
-export ARM_TENANT_ID="your-tenant-id"
-export ARM_SUBSCRIPTION_ID="your-subscription-id"
 ```
 
 ## 🚀 Quick Start
@@ -76,12 +62,8 @@ image_name = "my-nginx-image"
 # GCP Configuration
 gcp_project_id = "my-gcp-project"
 
-# Azure Configuration
-azure_client_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-azure_client_secret   = "your-secret-here"
-azure_tenant_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-azure_subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-azure_resource_group  = "my-images-rg"
+# GCP Configuration 
+gcp_project_id        = "my-gcp-project"
 ```
 
 ### 3. Initialize Packer and Install Plugins
@@ -91,8 +73,7 @@ packer init main.pkr.hcl
 
 This will automatically install the required plugins:
 - Amazon plugin for AWS AMI building
-- Google Cloud plugin for GCE image building  
-- Azure plugin for managed image building
+- Google Cloud plugin for GCE image building
 
 ### 4. Validate Template
 ```bash
@@ -137,9 +118,9 @@ packer build -only="amazon-ebs.aws" main.pkr.hcl
 ./build.sh --platform gcp
 packer build -only="googlecompute.gcp" main.pkr.hcl
 
-# Azure only
-./build.sh --platform azure
-packer build -only="azure-arm.azure" main.pkr.hcl
+# GCP only  
+./build.sh --platform gcp
+packer build -only="googlecompute.gcp" main.pkr.hcl
 ```
 
 #### Version Management:
@@ -262,7 +243,6 @@ After successful build, you'll have:
 
 - **AWS**: AMI in the specified region
 - **GCP**: Custom image in your project
-- **Azure**: Managed image in your resource group
 
 Each image will be tagged with:
 - Environment: poc
@@ -318,10 +298,6 @@ chmod +x cleanup.sh
 - ✅ Running Packer compute instances
 - ✅ Custom compute images
 
-**Azure:**
-- ✅ Running Packer VMs
-- ✅ Managed images
-
 ### Manual Cleanup
 
 **AWS AMIs:**
@@ -341,15 +317,6 @@ gcloud compute images list --filter="name~^poc-nginx-image.*"
 
 # Delete specific image
 gcloud compute images delete poc-nginx-image-gcp-1234567890
-```
-
-**Azure Managed Images:**
-```bash
-# List your images
-az image list --query "[?starts_with(name, 'poc-nginx-image')]"
-
-# Delete specific image
-az image delete --name poc-nginx-image-azure-1234567890 --resource-group your-rg
 ```
 
 ## 🔒 Security Considerations
