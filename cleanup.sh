@@ -368,61 +368,6 @@ cleanup_gcp() {
     fi
 }
 
-# Azure Cleanup
-cleanup_azure() {
-    echo -e "${BLUE}🔧 Cleaning up Azure Managed Images...${NC}"
-    
-    if ! command_exists az; then
-        echo -e "${YELLOW}⚠️  Azure CLI not found - skipping Azure cleanup${NC}"
-        return
-    fi
-
-    # Check Azure authentication
-    if ! az account show >/dev/null 2>&1; then
-        echo -e "${YELLOW}⚠️  Azure not authenticated - skipping Azure cleanup${NC}"
-        return
-    fi
-
-    # Get current subscription
-    local subscription_name
-    subscription_name=$(az account show --query name --output tsv)
-    echo -e "Current Azure subscription: ${YELLOW}$subscription_name${NC}"
-
-    # Find managed images with the specified prefix
-    local images
-    images=$(az image list --query "[?starts_with(name, '$IMAGE_PREFIX')].{Name:name,ResourceGroup:resourceGroup,Location:location}" --output table 2>/dev/null || echo "")
-    
-    if [[ -z "$images" ]] || [[ "$images" == *"[]"* ]]; then
-        echo -e "${GREEN}✅ No Azure managed images found with prefix '$IMAGE_PREFIX'${NC}"
-        return
-    fi
-
-    echo -e "${YELLOW}Found Azure Managed Images:${NC}"
-    echo "$images"
-    
-    if [[ "$DRY_RUN" == true ]]; then
-        echo -e "${BLUE}🔍 DRY RUN: Would delete the Azure images listed above${NC}"
-        return
-    fi
-
-    if confirm_action "This will delete all Azure managed images with prefix '$IMAGE_PREFIX'"; then
-        # Get image details
-        local image_data
-        image_data=$(az image list --query "[?starts_with(name, '$IMAGE_PREFIX')].{name:name,resourceGroup:resourceGroup}" --output tsv)
-        
-        while IFS=$'\t' read -r image_name resource_group; do
-            if [[ -n "$image_name" ]]; then
-                echo -e "${BLUE}🗑️  Deleting Azure image: $image_name (RG: $resource_group)${NC}"
-                if az image delete --name "$image_name" --resource-group "$resource_group"; then
-                    echo -e "${GREEN}✅ Image $image_name deleted${NC}"
-                else
-                    echo -e "${RED}❌ Failed to delete image $image_name${NC}"
-                fi
-            fi
-        done <<< "$image_data"
-    fi
-}
-
 # Main cleanup execution
 main() {
     if [[ "$DRY_RUN" == true ]]; then
@@ -433,8 +378,6 @@ main() {
     cleanup_aws
     echo ""
     cleanup_gcp
-    echo ""
-    cleanup_azure
     echo ""
 
     if [[ "$DRY_RUN" == true ]]; then
