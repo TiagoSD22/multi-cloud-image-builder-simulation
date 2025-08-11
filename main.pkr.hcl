@@ -23,12 +23,6 @@ variable "image_version" {
   description = "Version of the image (used for deduplication)"
 }
 
-variable "force_rebuild" {
-  type        = bool
-  default     = false
-  description = "Force rebuild even if image already exists"
-}
-
 variable "skip_create_ami" {
   type        = bool
   default     = false
